@@ -32,7 +32,7 @@ setup(name='ibmcloud',
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 2.7',
-        'Topic :: Cloud',
+        'Topic :: Software Development',
       ],
       keywords='IBM cloud REST API',
       packages=['ibmcloud']
