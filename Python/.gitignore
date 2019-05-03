@@ -1,0 +1,28 @@
+### Egg info 
+*.egg-info
+*.egg
+*.EGG
+*.EGG-INFO
+
+### Local Python env and test
+ibmcloud/bin
+ibmcloud/.Python
+ibmcloud/lib
+ibmcloud/include
+ibmcloud/test_credentials.py
+
+### Build and distribution
+build/
+dist/
+
+### Project stuff
+.DS_Store
+.idea
+
+### Compiled and backup files
+__pycache__
+*.pyc
+*.pyo
+*.tmp*
+*.bak
+
