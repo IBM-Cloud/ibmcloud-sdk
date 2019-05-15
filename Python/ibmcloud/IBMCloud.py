@@ -20,17 +20,20 @@ from tornado.httpclient import HTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
 import sys
 import json
+import jwt
 
 
 class IBMCloud():
-    def __init__(self, api_key, client_info=''):
+    def __init__(self, client_info='', endpoint='cloud.ibm.com'):
         self.functions = self.Functions(self)
+		self.iam = self.Iam(self)
+		self.resource_controller = self.Resource_Controller(self)
 
-        self.api_key = api_key
         if client_info == '':
             self.user_agent = 'IBM Cloud Python SDK'
         else:
             self.user_agent = client_info
+        self.endpoint = endpoint
         self.client = HTTPClient()
         self.request_headers = HTTPHeaders({'Content-Type': 'application/json'})
         self.request_headers.add('Accept', 'application/json')
@@ -40,14 +43,15 @@ class IBMCloud():
         self.request_headers_xml_content.add('User-Agent', self.user_agent)
         self.logged_on = False
 
-    def logon(self):
+    def authenticate(self, api_key):
+        self.api_key = api_key
         if sys.version_info >= (3, 0):
             data = urllib.parse.urlencode({'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': self.api_key})
         else:
             data = urllib.urlencode({'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': self.api_key})
 
         response = self.client.fetch(
-            'https://iam.cloud.ibm.com/oidc/token',
+            'https://iam.' + self.endpoint + '/identity/token',
             method='POST',
             headers=self.request_headers_xml_content,
             validate_cert=False,
@@ -56,6 +60,8 @@ class IBMCloud():
         if response.code == 200:
             # print("Authentication successful")
             bearer_response = json_decode(response.body)
+			access_token_decoded = jwt.decode(bearer_response['access_token'], verify=False)
+			self.current_account_id = access_token_decoded['account']['bss']
             self.bearer_token = 'Bearer ' + bearer_response['access_token']
             self.request_headers = HTTPHeaders({'Content-Type': 'application/json'})
             self.request_headers.add('Accept', 'application/json')
@@ -66,70 +72,80 @@ class IBMCloud():
         else:
             print("Authentication failed with http code {}".format(response.code))
 
-
-    def get_account_id(self, iam_api_key=''):
-        api_key_to_introspect=iam_api_key
-        if api_key_to_introspect == '':
-            api_key_to_introspect = self.api_key
-
-        if sys.version_info >= (3, 0):
-            data = urllib.parse.urlencode(
-                {'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': api_key_to_introspect})
-        else:
-            data = urllib.urlencode(
-                {'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': api_key_to_introspect})
+    def get_current_account_id(self):
+	    return self.current_account_id
 
 
-        response = self.client.fetch(
-            'https://iam.cloud.ibm.com/identity/introspect',
-            method='POST',
-            headers=self.request_headers_xml_content,
-            validate_cert=False,
-            body=data)
+    class Iam(object):
+	    def __init__(self, parent_instance):
+		    self.sdk = parent_instance
+			
+		def introspect(self, token='', apikey=''):
+		    if token == '':
+                if sys.version_info >= (3, 0):
+                    data = urllib.parse.urlencode({'apikey': apikey})
+                else:
+                    data = urllib.urlencode({'apikey': apikey})
+            else
+                if sys.version_info >= (3, 0):
+                    data = urllib.parse.urlencode({'token': token})
+                else:
+                    data = urllib.urlencode({'apikey': token})
 
-        if response.code != 200:
-            raise RuntimeError("Error: http code {} while introspecting IAM API key.".format(response.code))
+            response = self.sdk.client.fetch(
+                'https://iam.' + self.sdk.endpoint + '/identity/introspect',
+                method='POST',
+                headers=self.sdk.request_headers_xml_content,
+                validate_cert=False,
+                body=data)
 
-        return json_decode(response.body)['account']['bss']
+            if response.code != 200:
+                raise RuntimeError("Error: http code {} while introspecting IAM API key or token.".format(response.code))
 
-    def get_default_rersource_group_id(self, account_id=''):
-        if not self.logged_on:
-            print("You are not logged on to IBM Cloud")
-            return
+			return json_decode(response.body)
 
-        account_id_to_introspect=account_id
-        if account_id_to_introspect == '':
-            account_id_to_introspect = self.get_account_id()
 
-        response = self.client.fetch(
-            'https://resource-controller.cloud.ibm.com/v2/resource_groups?account_id=' + account_id_to_introspect,
-            method='GET',
-            headers=self.request_headers,
-            validate_cert=False)
+    class Resource_Controller(object):
+	    def __init__(self, parent_instance):
+		    self.sdk = parent_instance
+			
+		def get_default_resource_group_id(self)
+			if not self.sdk.logged_on:
+				print("You are not logged on to IBM Cloud")
+				return
 
-        if response.code != 200:
-            raise RuntimeError("Error: http code {} while listing resource groups.".format(response.code))
+			account_id_to_introspect = self.sdk.get_current_account_id()
 
-        resource_groups = json_decode(response.body)
+			response = self.sdk.client.fetch(
+				'https://resource-controller.' + self.sdk.endpoint + '/v2/resource_groups?account_id=' + account_id_to_introspect,
+				method='GET',
+				headers=self.sdk.request_headers,
+				validate_cert=False)
 
-        for group in resource_groups['resources']:
-            if group['default']:
-                return group['id']
+			if response.code != 200:
+				raise RuntimeError("Error: http code {} while listing resource groups.".format(response.code))
 
-        raise RuntimeError("No default resource group found.")
+			resource_groups = json_decode(response.body)
 
+			for group in resource_groups['resources']:
+				if group['default']:
+					return group['id']
+
+			raise RuntimeError("No default resource group found.")
+
+			
     class Functions(object):
         def __init__(self, parent_instance):
             self.sdk = parent_instance
 
-        def create_namespace(self, namespace, namespace_description='', resource_group_id=''):
+        def create_unique_namespace(self, namespace, namespace_description='', resource_group_id=''):
             if not self.sdk.logged_on:
                 print("You are not logged on to IBM Cloud")
                 return
 
             resource_group_id_to_introspect=resource_group_id
             if resource_group_id_to_introspect == '':
-                resource_group_id_to_introspect = self.sdk.get_default_rersource_group_id()
+                resource_group_id_to_introspect = self.sdk.resource_controller.get_default_resource_group_id()
 
             data = json.dumps({'description': namespace_description,
                                'name': namespace,
@@ -137,12 +153,14 @@ class IBMCloud():
                                'resource_plan_id': 'functions-base-plan'})
 
             response = self.sdk.client.fetch(
-                'https://us-south.functions.cloud.ibm.com/api/v1/namespaces?limit=0&offset=0',
+                'https://us-south.functions.' + self.sdk.endpoint + '/api/v1/namespaces?limit=0&offset=0',
                 method='GET',
                 headers=self.sdk.request_headers,
                 validate_cert=False)
+
             if response.code != 200:
                 raise RuntimeError("Error: http code {} while listing namespaces.".format(response.code))
+
             namespaces = json_decode(response.body)
 
             for current_namespace in namespaces['namespaces']:
@@ -152,7 +170,7 @@ class IBMCloud():
 
             # Create new namespace:
             response = self.sdk.client.fetch(
-                'https://us-south.functions.cloud.ibm.com/api/v1/namespaces',
+                'https://us-south.functions.' + self.sdk.endpoint + '/api/v1/namespaces',
                 method='POST',
                 headers=self.sdk.request_headers,
                 validate_cert=False,
@@ -162,18 +180,20 @@ class IBMCloud():
                 raise RuntimeError("Error: http code {} with error {} while creating function namespace."
                                     .format(response.code, response.error))
 
-        def get_namespace_id(self, namespace):
+        def get_unique_namespace_id(self, namespace):
             if not self.sdk.logged_on:
                 print("You are not logged on to IBM Cloud")
                 return
 
             response = self.sdk.client.fetch(
-                'https://us-south.functions.cloud.ibm.com/api/v1/namespaces?limit=0&offset=0',
+                'https://us-south.functions.' + self.sdk.endpoint + '/api/v1/namespaces?limit=0&offset=0',
                 method='GET',
                 headers=self.sdk.request_headers,
                 validate_cert=False)
+
             if response.code != 200:
                 raise RuntimeError("Error: http code {} while listing namespaces.".format(response.code))
+
             namespaces = json_decode(response.body)
 
             namespace_id = ''
@@ -188,15 +208,16 @@ class IBMCloud():
 
             raise RuntimeError("No namespace \"{}\" found.".format(namespace))
 
-        def delete_namespace(self, namespace):
+        def delete_unique_namespace(self, namespace):
             if not self.sdk.logged_on:
                 print("You are not logged on to IBM Cloud")
                 return
 
             response = self.sdk.client.fetch(
-                'https://us-south.functions.cloud.ibm.com/api/v1/namespaces/{}'.format(self.get_namespace_id(namespace)),
+                'https://us-south.functions.' + self.sdk.endpoint + '/api/v1/namespaces/{}'.format(self.get_unique_namespace_id(namespace)),
                 method='DELETE',
                 headers=self.sdk.request_headers,
                 validate_cert=False)
+
             if response.code != 200:
                 raise RuntimeError("Error: http code {} while deleting namespace.".format(response.code))
