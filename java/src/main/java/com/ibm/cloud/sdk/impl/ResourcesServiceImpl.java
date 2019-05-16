@@ -30,15 +30,15 @@ import javax.ws.rs.core.Response;
 
 import com.ibm.cloud.sdk.ResourceGroup;
 import com.ibm.cloud.sdk.exceptions.ServiceError;
-import com.ibm.cloud.sdk.services.ResourceControllerService;
+import com.ibm.cloud.sdk.services.ResourcesService;
 import com.ibm.cloud.sdk.util.Communication;
 import com.ibm.cloud.sdk.util.Iso8601Helper;
 
-public class ResourceControllerServiceImpl implements ResourceControllerService {
+public class ResourcesServiceImpl implements ResourcesService {
 
     private IBMCloudClientImpl ibmCloudClientImpl;
 
-    public ResourceControllerServiceImpl(final IBMCloudClientImpl ibmCloudClientImpl) {
+    public ResourcesServiceImpl(final IBMCloudClientImpl ibmCloudClientImpl) {
         this.ibmCloudClientImpl = ibmCloudClientImpl;
     }
 
@@ -72,7 +72,7 @@ public class ResourceControllerServiceImpl implements ResourceControllerService 
                 userAgent = "IBM Cloud SDK 1.0";
             }
             String authorizationHeaderValue = "Bearer " + ibmCloudClientImpl.getIAMAccessToken();
-            String requestUrl = "https://resource-controller." + ibmCloudClientImpl.getEndpoint() + "/v2/resource_groups?account_id=" + ibmCloudClientImpl.getCurrentAccountId();
+            String requestUrl = "https://resource-controller." + ibmCloudClientImpl.getEndpoint() + "/v2/resource_groups?account_id=" + ibmCloudClientImpl.getAccountId();
             Invocation.Builder ivb = client.target(requestUrl).request();
             ivb.header("User-Agent", userAgent);
             ivb.header("Accept", "application/json");

@@ -18,7 +18,7 @@ package com.ibm.cloud.sdk.services;
 
 import com.ibm.cloud.sdk.exceptions.ServiceError;
 
-public interface ResourceControllerService {
+public interface ResourcesService {
 
     String getDefaultResourceGroupId() throws ServiceError;
 

@@ -21,41 +21,20 @@ import com.ibm.cloud.sdk.exceptions.AuthenticationError;
 import com.ibm.cloud.sdk.impl.IBMCloudClientImpl;
 import com.ibm.cloud.sdk.services.AccountService;
 import com.ibm.cloud.sdk.services.FunctionsService;
-import com.ibm.cloud.sdk.services.ResourceControllerService;
+import com.ibm.cloud.sdk.services.ResourcesService;
 
 public abstract class IBMCloudClient {
 
-    public enum Environment {
-        test, prod;
-    }
-
     public static IBMCloudClient createNew() {
-        return createNew(null, Environment.prod);
-    }
-
-    public static IBMCloudClient createNew(Environment env) {
-        return createNew(null, env);
+        return createNew(null);
     }
 
     public static IBMCloudClient createNew(String clientInfo) {
-        return createNew(clientInfo, Environment.prod);
+        return createNew(clientInfo, "cloud.ibm.com");
     }
 
-    public static IBMCloudClient createNew(String clientInfo, Environment env) {
-        return new IBMCloudClientImpl(clientInfo, env);
-    }
-
-    /**
-     * Returns null if all prerequisites are met, otherwise a short message
-     * indicating a prerequisite that is missing.
-     */
-    public static String checkPrereqs() {
-        try {
-            Class.forName("com.ibm.cloud.sdk.impl.IBMCloudSessionImpl");
-        } catch (ClassNotFoundException cnfe) {
-            return "Could not find implementation class com.ibm.cloud.sdk.impl.IBMCloudSessionImpl";
-        }
-        return null;
+    public static IBMCloudClient createNew(String clientInfo, String endpoint) {
+        return new IBMCloudClientImpl(clientInfo, endpoint);
     }
 
     // --- authentication ---
@@ -82,13 +61,13 @@ public abstract class IBMCloudClient {
 
     public abstract boolean hasIMSPortalToken();
 
-    public abstract String getCurrentAccountId();
+    public abstract String getAccountId();
 
     // --- account management ---
     public abstract AccountService getAccountService();
 
     // --- resource controller ---
-    public abstract ResourceControllerService getResourceControllerService();
+    public abstract ResourcesService getResourcesService();
 
     // --- IAM API ---
     public abstract IAMService getIAMService();

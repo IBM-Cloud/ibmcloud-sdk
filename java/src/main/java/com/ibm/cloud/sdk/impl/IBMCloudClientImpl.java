@@ -29,22 +29,15 @@ import com.ibm.cloud.sdk.authentication.Authenticator;
 import com.ibm.cloud.sdk.exceptions.AuthenticationError;
 import com.ibm.cloud.sdk.services.AccountService;
 import com.ibm.cloud.sdk.services.FunctionsService;
-import com.ibm.cloud.sdk.services.ResourceControllerService;
+import com.ibm.cloud.sdk.services.ResourcesService;
 import com.ibm.cloud.sdk.util.JwtTokenHelper;
 
 public class IBMCloudClientImpl extends IBMCloudClient {
-
-    private static final String ENDPOINT_PROD = "cloud.ibm.com";
-    private static final String ENDPOINT_TEST = "test.cloud.ibm.com";
 
     private String endpoint;
     private String clientInfo;
 
     private AuthenticationResult authResult = null;
-
-    public IBMCloudClientImpl(String clientInfo, Environment env) {
-        this(clientInfo, env == Environment.test ? ENDPOINT_TEST : ENDPOINT_PROD);
-    }
 
     public IBMCloudClientImpl(String clientInfo, String endpoint) {
         this.clientInfo = clientInfo;
@@ -141,7 +134,7 @@ public class IBMCloudClientImpl extends IBMCloudClient {
     }
 
     public void verifyAccountSelected() {
-        String accountId = getCurrentAccountId();
+        String accountId = getAccountId();
         if (accountId == null) {
             throw new IllegalStateException("no account selected");
         }
@@ -162,7 +155,7 @@ public class IBMCloudClientImpl extends IBMCloudClient {
     }
 
     @Override
-    public String getCurrentAccountId() {
+    public String getAccountId() {
         verifyAuthenticated();
         String result = null;
         JsonObject claims = parseClaimsFromJwtToken(getIAMAccessToken());
@@ -178,8 +171,8 @@ public class IBMCloudClientImpl extends IBMCloudClient {
     }
 
     @Override
-    public ResourceControllerService getResourceControllerService() {
-        return new ResourceControllerServiceImpl(this);
+    public ResourcesService getResourcesService() {
+        return new ResourcesServiceImpl(this);
     }
 
     @Override

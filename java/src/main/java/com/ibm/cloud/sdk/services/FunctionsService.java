@@ -24,24 +24,13 @@ import com.ibm.cloud.sdk.exceptions.ServiceError;
 
 public interface FunctionsService {
 
-    void createNamespace(String name, String description) throws ServiceError;
+    void createNamespace(String name, String description) throws AlreadyExistsException, ServiceError;
 
-    void createNamespace(String name, String description, String resourceGroupId) throws ServiceError;
+    String getNamespaceId(String name) throws AmbiguousNamespaceException, ServiceError;
 
-    List<String> getNamespaceId(String name) throws ServiceError;
+    List<String> getNamespaceIds(String name) throws ServiceError;
 
-    List<String> getNamespaceId(String name, String resourceGroupId) throws ServiceError;
+    void deleteNamespaceByName(String name) throws AmbiguousNamespaceException, ServiceError;
 
-    void createUniqueNamespace(String name, String description) throws AlreadyExistsException, ServiceError;
-
-    void createUniqueNamespace(String name, String description, String resourceGroupId) throws AlreadyExistsException, ServiceError;
-
-    String getUniqueNamespaceId(String name) throws AmbiguousNamespaceException, ServiceError;
-
-    String getUniqueNamespaceId(String name, String resourceGroupId) throws AmbiguousNamespaceException, ServiceError;
-
-    void deleteUniqueNamespaceByName(String name) throws AmbiguousNamespaceException, ServiceError;
-
-    void deleteUniqueNamespaceByName(String name, String resourceGroupId) throws AmbiguousNamespaceException, ServiceError;
-
+    void deleteNamespaceById(String id) throws ServiceError;
 }

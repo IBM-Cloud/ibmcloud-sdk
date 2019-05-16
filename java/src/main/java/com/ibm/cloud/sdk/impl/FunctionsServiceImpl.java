@@ -46,13 +46,14 @@ public class FunctionsServiceImpl implements FunctionsService {
     }
 
     @Override
-    public void createNamespace(String name, String description) throws ServiceError {
-        String defaultResourceGroupId = ibmCloudClientImpl.getResourceControllerService().getDefaultResourceGroupId();
-        createNamespace(name, description, defaultResourceGroupId);
-    }
+    public void createNamespace(String name, String description) throws AlreadyExistsException, ServiceError {
 
-    @Override
-    public void createNamespace(String name, String description, String resourceGroupId) throws ServiceError {
+        String defaultResourceGroupId = ibmCloudClientImpl.getResourcesService().getDefaultResourceGroupId();
+
+        List<String> existingNamespaces = getNamespaceIds(name, defaultResourceGroupId);
+        if (existingNamespaces.size() > 0) {
+            throw new AlreadyExistsException();
+        }
 
         Client client = null;
         Response res = null;
@@ -73,7 +74,7 @@ public class FunctionsServiceImpl implements FunctionsService {
             if (description != null) {
                 bodyBuilder.add("description", description);
             }
-            bodyBuilder.add("resource_group_id", resourceGroupId);
+            bodyBuilder.add("resource_group_id", defaultResourceGroupId);
             bodyBuilder.add("resource_plan_id", "functions-base-plan");
             JsonObject body = bodyBuilder.build();
 
@@ -97,13 +98,21 @@ public class FunctionsServiceImpl implements FunctionsService {
     }
 
     @Override
-    public List<String> getNamespaceId(String name) throws ServiceError {
-        String defaultResourceGroupId = ibmCloudClientImpl.getResourceControllerService().getDefaultResourceGroupId();
-        return getNamespaceId(name, defaultResourceGroupId);
+    public String getNamespaceId(String name) throws AmbiguousNamespaceException, ServiceError {
+        List<String> namespaceIds = getNamespaceIds(name);
+        if (namespaceIds.size() > 1) {
+            throw new AmbiguousNamespaceException();
+        }
+        return namespaceIds.get(0);
     }
 
     @Override
-    public List<String> getNamespaceId(String name, String resourceGroupId) throws ServiceError {
+    public List<String> getNamespaceIds(String name) throws ServiceError {
+        String defaultResourceGroupId = ibmCloudClientImpl.getResourcesService().getDefaultResourceGroupId();
+        return getNamespaceIds(name, defaultResourceGroupId);
+    }
+
+    private List<String> getNamespaceIds(String name, String resourceGroupId) throws ServiceError {
         List<String> result = new ArrayList<>();
         List<Namespace> allNamespaces = getNamespaces();
         for (Namespace namespace : allNamespaces) {
@@ -115,45 +124,8 @@ public class FunctionsServiceImpl implements FunctionsService {
     }
 
     @Override
-    public void createUniqueNamespace(String name, String description) throws AlreadyExistsException, ServiceError {
-        String defaultResourceGroupId = ibmCloudClientImpl.getResourceControllerService().getDefaultResourceGroupId();
-        createUniqueNamespace(name, description, defaultResourceGroupId);
-    }
-
-    @Override
-    public void createUniqueNamespace(String name, String description, String resourceGroupId) throws AlreadyExistsException, ServiceError {
-        List<String> namespaces = getNamespaceId(name, resourceGroupId);
-        if (namespaces.size() > 0) {
-            throw new AlreadyExistsException();
-        }
-        createNamespace(name, description, resourceGroupId);
-    }
-
-    @Override
-    public String getUniqueNamespaceId(String name) throws AmbiguousNamespaceException, ServiceError {
-        String defaultResourceGroupId = ibmCloudClientImpl.getResourceControllerService().getDefaultResourceGroupId();
-        return getUniqueNamespaceId(name, defaultResourceGroupId);
-    }
-
-    @Override
-    public String getUniqueNamespaceId(String name, String resourceGroupId) throws AmbiguousNamespaceException, ServiceError {
-        List<String> namespaceIds = getNamespaceId(name, resourceGroupId);
-        if (namespaceIds.size() > 1) {
-            throw new AmbiguousNamespaceException();
-        }
-        return namespaceIds.get(0);
-    }
-
-    @Override
-    public void deleteUniqueNamespaceByName(String name) throws AmbiguousNamespaceException, ServiceError {
-        String defaultResourceGroupId = ibmCloudClientImpl.getResourceControllerService().getDefaultResourceGroupId();
-        deleteUniqueNamespaceByName(name, defaultResourceGroupId);
-    }
-
-    @Override
-    public void deleteUniqueNamespaceByName(String name, String resourceGroupId) throws AmbiguousNamespaceException, ServiceError {
-
-        String namespaceId = getUniqueNamespaceId(name, resourceGroupId);
+    public void deleteNamespaceByName(String name) throws AmbiguousNamespaceException, ServiceError {
+        String namespaceId = getNamespaceId(name);
         deleteNamespaceById(namespaceId);
     }
 
