@@ -41,6 +41,8 @@ public abstract class IBMCloudClient {
 
     public abstract boolean isAuthenticated();
 
+    public abstract void authenticateUseApiKey(String apikey) throws AuthenticationError;
+
     public abstract void authenticate(Authenticator authenticator) throws AuthenticationError;
 
     public abstract void reauthenticate() throws AuthenticationError;

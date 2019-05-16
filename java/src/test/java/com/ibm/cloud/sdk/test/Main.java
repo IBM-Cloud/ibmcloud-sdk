@@ -1,7 +1,6 @@
 package com.ibm.cloud.sdk.test;
 
 import com.ibm.cloud.sdk.IBMCloudClient;
-import com.ibm.cloud.sdk.authentication.Authenticator;
 import com.ibm.cloud.sdk.exceptions.AlreadyExistsException;
 import com.ibm.cloud.sdk.exceptions.AmbiguousNamespaceException;
 import com.ibm.cloud.sdk.exceptions.AuthenticationError;
@@ -19,8 +18,7 @@ public class Main {
         IBMCloudClient ibmcloudClient = IBMCloudClient.createNew("ibmcloud SDK test");
 
         System.out.println("Logging on to IBM Cloud using IAM API Key");
-        Authenticator auth = Authenticator.newBuilder().useApiKey(test_credentials_apikey).build();
-        ibmcloudClient.authenticate(auth);
+        ibmcloudClient.authenticateUseApiKey(test_credentials_apikey);
 
         System.out.println("Getting account ID for initialized IAM API Key");
         System.out.println(ibmcloudClient.getAccountId());

@@ -70,6 +70,12 @@ public class IBMCloudClientImpl extends IBMCloudClient {
     }
 
     @Override
+    public void authenticateUseApiKey(String apikey) throws AuthenticationError {
+        Authenticator authenticator = Authenticator.newBuilder().useApiKey(apikey).build();
+        authenticate(authenticator);
+    }
+
+    @Override
     public void authenticate(Authenticator authenticator) throws AuthenticationError {
         this.authResult = authenticator.authenticate("https://iam." + endpoint, clientInfo);
     }
@@ -197,5 +203,4 @@ public class IBMCloudClientImpl extends IBMCloudClient {
         }
         return result;
     }
-
 }
